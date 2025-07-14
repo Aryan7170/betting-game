@@ -1,0 +1,13 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build and Test",
+      "type": "shell",
+      "command": "forge build && forge test",
+      "group": "build",
+      "problemMatcher": ["$gcc"],
+      "isBackground": false
+    }
+  ]
+}
