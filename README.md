@@ -22,6 +22,7 @@ A decentralized betting game built on Ethereum using Foundry and Chainlink VRF f
 ### Game Types
 
 1. **Coin Flip**
+
    - Prediction: 0 (heads) or 1 (tails)
    - Payout: 2x bet amount (minus 2% house edge)
    - Win Rate: 50%
@@ -41,17 +42,20 @@ A decentralized betting game built on Ethereum using Foundry and Chainlink VRF f
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd betting-game
 ```
 
 2. Install dependencies:
+
 ```bash
 forge install
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
@@ -112,6 +116,7 @@ make deploy-mainnet
 #### Manual Deployment
 
 **Local Development (Anvil)**:
+
 ```bash
 # Start Anvil
 anvil
@@ -121,12 +126,15 @@ forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
 ```
 
 **Sepolia Testnet**:
+
 1. Set up Chainlink VRF Subscription:
+
    - Go to [Chainlink VRF](https://vrf.chain.link/)
    - Create a subscription and fund with LINK tokens
    - Update subscription ID in `HelperConfig.s.sol`
 
 2. Deploy:
+
 ```bash
 forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY --broadcast --verify --etherscan-api-key $ETHERSCAN_API_KEY
 ```
@@ -136,6 +144,7 @@ forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/
 #### Network Configuration
 
 The `HelperConfig` automatically handles:
+
 - ✅ VRF Coordinator addresses for each network
 - ✅ Gas lane configurations
 - ✅ Mock VRF deployment for local testing
@@ -143,6 +152,7 @@ The `HelperConfig` automatically handles:
 - ✅ Deployment key management
 
 Supported networks:
+
 - Anvil Local (Chain ID: 31337) - Uses MockVRF
 - Sepolia Testnet (Chain ID: 11155111)
 - Ethereum Mainnet (Chain ID: 1)
@@ -154,6 +164,7 @@ Supported networks:
 ### Placing Bets
 
 **Coin Flip Bet**:
+
 ```solidity
 // Bet 0.1 ETH on heads (0)
 bettingGame.placeCoinBet{value: 0.1 ether}(0);
@@ -163,6 +174,7 @@ bettingGame.placeCoinBet{value: 0.1 ether}(1);
 ```
 
 **Dice Roll Bet**:
+
 ```solidity
 // Bet 0.1 ETH on rolling a 3
 bettingGame.placeDiceBet{value: 0.1 ether}(3);
@@ -239,6 +251,7 @@ The project includes comprehensive tests covering:
 ## Deployment Addresses
 
 ### Sepolia Testnet
+
 - Contract: `TBD`
 - VRF Coordinator: `0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625`
 

@@ -6,7 +6,10 @@ import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 
 contract MockVRFCoordinator is VRFCoordinatorV2Interface {
     uint256 private s_requestId = 1;
+    uint64 private s_subscriptionId = 1;
     mapping(uint256 => bool) private s_pendingRequests;
+    mapping(uint64 => address[]) private s_consumers;
+    mapping(uint64 => uint96) private s_balances;
     
     function requestRandomWords(
         bytes32, // keyHash
@@ -40,8 +43,8 @@ contract MockVRFCoordinator is VRFCoordinatorV2Interface {
         return (0, 0, new bytes32[](0));
     }
     
-    function createSubscription() external pure override returns (uint64) {
-        return 0;
+    function createSubscription() external override returns (uint64) {
+        return s_subscriptionId++;
     }
     
     function getSubscription(uint64) external pure override returns (uint96, uint64, address, address[] memory) {
@@ -56,8 +59,8 @@ contract MockVRFCoordinator is VRFCoordinatorV2Interface {
         // Not implemented for testing
     }
     
-    function addConsumer(uint64, address) external pure override {
-        // Not implemented for testing
+    function addConsumer(uint64 subId, address consumer) external override {
+        s_consumers[subId].push(consumer);
     }
     
     function removeConsumer(uint64, address) external pure override {
@@ -70,5 +73,9 @@ contract MockVRFCoordinator is VRFCoordinatorV2Interface {
     
     function pendingRequestExists(uint64) external pure override returns (bool) {
         return false;
+    }
+    
+    function fundSubscription(uint64 subId, uint96 amount) external {
+        s_balances[subId] += amount;
     }
 }

@@ -50,14 +50,14 @@ contract BettingGameTest is Test {
         vm.stopPrank();
         
         // Fund players
-        vm.deal(player1, 5 ether);
-        vm.deal(player2, 5 ether);
+        vm.deal(player1, 500 ether);
+        vm.deal(player2, 500 ether);
     }
     
     function testDeployment() public {
         assertEq(bettingGame.owner(), owner);
-        assertEq(bettingGame.MIN_BET(), 0.01 ether);
-        assertEq(bettingGame.MAX_BET(), 1 ether);
+        assertEq(bettingGame.MIN_BET(), 0.0001 ether);
+        assertEq(bettingGame.MAX_BET(), 100 ether);
         assertEq(bettingGame.HOUSE_EDGE(), 200); // 2%
         assertEq(bettingGame.nextBetId(), 0);
     }
@@ -108,7 +108,7 @@ contract BettingGameTest is Test {
         vm.startPrank(player1);
         
         vm.expectRevert(BettingGame.BettingGame__BetAmountTooLow.selector);
-        bettingGame.placeCoinBet{value: 0.005 ether}(0);
+        bettingGame.placeCoinBet{value: 0.000099 ether}(0);
         
         vm.stopPrank();
     }
@@ -117,7 +117,7 @@ contract BettingGameTest is Test {
         vm.startPrank(player1);
         
         vm.expectRevert(BettingGame.BettingGame__BetAmountTooHigh.selector);
-        bettingGame.placeCoinBet{value: 1.1 ether}(0);
+        bettingGame.placeCoinBet{value: 101 ether}(0);
         
         vm.stopPrank();
     }

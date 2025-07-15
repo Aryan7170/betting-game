@@ -21,8 +21,8 @@ contract BettingGame is VRFConsumerBaseV2, ConfirmedOwner {
     
     // Game configuration
     uint256 public constant HOUSE_EDGE = 200; // 2% house edge (200 / 10000)
-    uint256 public constant MIN_BET = 0.01 ether;
-    uint256 public constant MAX_BET = 1 ether;
+    uint256 public constant MIN_BET = 0.0001 ether;
+    uint256 public constant MAX_BET = 100 ether;
     
     // Game states
     enum GameType { COIN, DICE }

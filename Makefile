@@ -33,28 +33,33 @@ help:
 	@echo "  make clean            Clean build artifacts"
 	@echo ""
 	@echo "Deployment:"
-	@echo "  make deploy           Deploy using environment variables (default network: anvil)"
-	@echo "  make deploy-sepolia   Deploy to Sepolia testnet"
-	@echo "  make deploy-mainnet   Deploy to Ethereum mainnet"
-	@echo "  make deploy-with-params Deploy with explicit parameters (requires SUBSCRIPTION_ID, FUNDING_AMOUNT)"
+	@echo "  make deploy-anvil     Deploy to local Anvil (uses environment variables)"
+	@echo "  make deploy-sepolia   Deploy to Sepolia testnet (requires parameters)"
+	@echo "  make deploy-mainnet   Deploy to Ethereum mainnet (requires parameters)"
 	@echo "  make check-env        Check environment variables"
 	@echo ""
-	@echo "Environment Variables:"
-	@echo "  VRF_SUBSCRIPTION_ID   Chainlink VRF subscription ID (required for testnets/mainnet)"
+	@echo "Environment Variables (for Anvil only):"
 	@echo "  VRF_CALLBACK_GAS_LIMIT Callback gas limit (default: 300000)"
 	@echo "  INITIAL_FUNDING       Contract funding amount in wei (optional)"
-	@echo "  TEST_*_BET_AMOUNT     Test betting amounts (default: 0.01 ETH)"
-	@echo "  TEST_*_PREDICTION     Test predictions (coin: 0-1, dice: 1-6)"
+	@echo "  PRIVATE_KEY           Private key (falls back to Anvil default)"
+	@echo ""
+	@echo "Parameters (for other networks):"
+	@echo "  SUBSCRIPTION_ID       Chainlink VRF subscription ID (required)"
+	@echo "  PRIVATE_KEY           Private key for deployment (required)"
+	@echo "  CALLBACK_GAS_LIMIT    Callback gas limit (optional, default: 300000)"
+	@echo "  FUNDING_AMOUNT        Contract funding amount in wei (optional)"
 	@echo ""
 	@echo "Examples:"
-	@echo "  # Deploy with environment variables"
-	@echo "  export VRF_SUBSCRIPTION_ID=123 && export INITIAL_FUNDING=1000000000000000000 && make deploy-sepolia"
-	@echo "  # Deploy with parameters"
-	@echo "  SUBSCRIPTION_ID=123 FUNDING_AMOUNT=1000000000000000000 make deploy-with-params"
+	@echo "  # Deploy to Anvil (uses environment variables)"
+	@echo "  export INITIAL_FUNDING=1000000000000000000 && make deploy-anvil"
+	@echo "  # Deploy to Sepolia (uses parameters)"
+	@echo "  SUBSCRIPTION_ID=123 PRIVATE_KEY=0x123... make deploy-sepolia"
+	@echo "  # Deploy to Sepolia with all parameters"
+	@echo "  SUBSCRIPTION_ID=123 PRIVATE_KEY=0x123... CALLBACK_GAS_LIMIT=500000 FUNDING_AMOUNT=1000000000000000000 make deploy-sepolia"
 	@echo ""
 	@echo "Local Development:"
 	@echo "  make anvil            Start local Anvil node"
-	@echo "  make deploy-local     Deploy to local Anvil"
+	@echo "  make deploy-anvil     Deploy to local Anvil"
 	@echo "  make interact-local   Interact with local deployment"
 	@echo ""
 	@echo "Interaction (requires BETTING_GAME_ADDRESS):"
@@ -64,6 +69,7 @@ help:
 	@echo "  make fund-contract    Fund contract with ETH (requires AMOUNT in ether)"
 	@echo "  make interact-withdraw Withdraw funds (requires AMOUNT)"
 	@echo "  make interact-stats   Get game statistics"
+	@echo "  make check-balance    Check contract balance"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test-unit        Run unit tests"
@@ -117,40 +123,36 @@ anvil:
 	@echo "Starting Anvil local node..."
 	anvil
 
-.PHONY: deploy-local
-deploy-local:
-	@echo "Deploying to local Anvil..."
-	forge script script/Deploy.s.sol --rpc-url $(ANVIL_RPC_URL) --broadcast
-
 .PHONY: interact-local
 interact-local:
 	@echo "Interacting with local deployment..."
 	forge script script/Interact.s.sol --rpc-url $(ANVIL_RPC_URL) --broadcast
 
 # Deployment
-.PHONY: deploy
-deploy:
-	@echo "Deploying to $(NETWORK)..."
-	forge script script/Deploy.s.sol --rpc-url $(RPC_URL) --broadcast $(VERIFY_FLAG)
-
-.PHONY: deploy-with-params
-deploy-with-params:
-	@echo "Deploying with parameters to $(NETWORK)..."
-	@if [ -z "$(SUBSCRIPTION_ID)" ]; then echo " Please set SUBSCRIPTION_ID"; exit 1; fi
-	@if [ -z "$(FUNDING_AMOUNT)" ]; then echo " Please set FUNDING_AMOUNT"; exit 1; fi
-	forge script script/Deploy.s.sol --sig "run(uint64,uint256)" $(SUBSCRIPTION_ID) $(FUNDING_AMOUNT) --rpc-url $(RPC_URL) --broadcast $(VERIFY_FLAG)
+.PHONY: deploy-anvil
+deploy-anvil:
+	@echo "Deploying to local Anvil using environment variables..."
+	forge script script/Deploy.s.sol --rpc-url $(ANVIL_RPC_URL) --broadcast
 
 .PHONY: deploy-sepolia
 deploy-sepolia:
-	@echo "Deploying to Sepolia testnet..."
-	forge script script/Deploy.s.sol --rpc-url $(SEPOLIA_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
+	@echo "Deploying to Sepolia testnet using parameters..."
+	@if [ -z "$(SUBSCRIPTION_ID)" ]; then echo "ERROR: Please set SUBSCRIPTION_ID"; exit 1; fi
+	@if [ -z "$(PRIVATE_KEY)" ]; then echo "ERROR: Please set PRIVATE_KEY"; exit 1; fi
+	@CALLBACK_GAS_LIMIT=$${CALLBACK_GAS_LIMIT:-300000}; \
+	FUNDING_AMOUNT=$${FUNDING_AMOUNT:-0}; \
+	forge script script/Deploy.s.sol --sig "run(uint64,uint256,uint32,uint256)" $(SUBSCRIPTION_ID) $(PRIVATE_KEY) $$CALLBACK_GAS_LIMIT $$FUNDING_AMOUNT --rpc-url $(SEPOLIA_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 .PHONY: deploy-mainnet
 deploy-mainnet:
-	@echo "Deploying to Ethereum mainnet..."
-	@echo " WARNING: This will deploy to MAINNET! Are you sure? (Press Enter to continue, Ctrl+C to cancel)"
+	@echo "Deploying to Ethereum mainnet using parameters..."
+	@echo "WARNING: This will deploy to MAINNET! Are you sure? (Press Enter to continue, Ctrl+C to cancel)"
 	@read
-	forge script script/Deploy.s.sol --rpc-url $(MAINNET_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
+	@if [ -z "$(SUBSCRIPTION_ID)" ]; then echo "ERROR: Please set SUBSCRIPTION_ID"; exit 1; fi
+	@if [ -z "$(PRIVATE_KEY)" ]; then echo "ERROR: Please set PRIVATE_KEY"; exit 1; fi
+	@CALLBACK_GAS_LIMIT=$${CALLBACK_GAS_LIMIT:-300000}; \
+	FUNDING_AMOUNT=$${FUNDING_AMOUNT:-0}; \
+	forge script script/Deploy.s.sol --sig "run(uint64,uint256,uint32,uint256)" $(SUBSCRIPTION_ID) $(PRIVATE_KEY) $$CALLBACK_GAS_LIMIT $$FUNDING_AMOUNT --rpc-url $(MAINNET_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 # Utility commands
 .PHONY: format
@@ -265,3 +267,12 @@ fund-contract:
 	@if [ -z "$(BETTING_GAME_ADDRESS)" ]; then echo "❌ Please set BETTING_GAME_ADDRESS"; exit 1; fi
 	@if [ -z "$(AMOUNT)" ]; then echo "❌ Please set AMOUNT (in ether, e.g., 1ether)"; exit 1; fi
 	cast send $(BETTING_GAME_ADDRESS) --value $(AMOUNT) --rpc-url $(RPC_URL) --private-key $(PRIVATE_KEY)
+
+.PHONY: check-balance
+check-balance:
+	@echo "Checking contract balance..."
+	@if [ -z "$(BETTING_GAME_ADDRESS)" ]; then echo "❌ Please set BETTING_GAME_ADDRESS"; exit 1; fi
+	@echo "ETH Balance:"
+	@cast balance $(BETTING_GAME_ADDRESS) --rpc-url $(RPC_URL)
+	@echo "Contract Stats:"
+	@cast call $(BETTING_GAME_ADDRESS) "getGameStats()" --rpc-url $(RPC_URL)
