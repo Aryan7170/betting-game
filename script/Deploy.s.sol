@@ -10,7 +10,7 @@ contract Deploy is Script {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
 
-        vm.startBroadcast(config.account);
+        vm.startBroadcast();
         BettingGame bettingGame = new BettingGame(
             config.subscriptionId,
             config.vrfCoordinatorV2_5,

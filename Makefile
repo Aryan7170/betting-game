@@ -1,5 +1,9 @@
 # Makefile for BettingGame Foundry Project
 
+# Load environment variables from .env file
+-include .env
+export
+
 # Default to anvil if no network specified
 NETWORK ?= anvil
 
@@ -34,20 +38,21 @@ help:
 	@echo ""
 	@echo "Deployment:"
 	@echo "  make deploy-anvil     Deploy to local Anvil (uses environment variables)"
-	@echo "  make deploy-sepolia   Deploy to Sepolia testnet (requires parameters)"
-	@echo "  make deploy-mainnet   Deploy to Ethereum mainnet (requires parameters)"
+	@echo "  make deploy-sepolia   Deploy to Sepolia testnet (uses environment variables)"
+	@echo "  make deploy-mainnet   Deploy to Ethereum mainnet (uses environment variables)"
 	@echo "  make check-env        Check environment variables"
 	@echo ""
-	@echo "Environment Variables (for Anvil only):"
+	@echo "Required Environment Variables:"
+	@echo "  PRIVATE_KEY           Private key for deployment"
+	@echo "  ACCOUNT_ADDRESS       Account address for deployment"
+	@echo "  VRF_SUBSCRIPTION_ID   Chainlink VRF subscription ID"
 	@echo "  VRF_CALLBACK_GAS_LIMIT Callback gas limit (default: 300000)"
-	@echo "  INITIAL_FUNDING       Contract funding amount in wei (optional)"
-	@echo "  PRIVATE_KEY           Private key (falls back to Anvil default)"
-	@echo ""
-	@echo "Parameters (for other networks):"
-	@echo "  SUBSCRIPTION_ID       Chainlink VRF subscription ID (required)"
-	@echo "  PRIVATE_KEY           Private key for deployment (required)"
-	@echo "  CALLBACK_GAS_LIMIT    Callback gas limit (optional, default: 300000)"
-	@echo "  FUNDING_AMOUNT        Contract funding amount in wei (optional)"
+	@echo "  SEPOLIA_VRF_COORDINATOR Sepolia VRF coordinator address"
+	@echo "  SEPOLIA_VRF_KEYHASH   Sepolia VRF key hash"
+	@echo "  MAINNET_VRF_COORDINATOR Mainnet VRF coordinator address"
+	@echo "  MAINNET_VRF_KEYHASH   Mainnet VRF key hash"
+	@echo "  ALCHEMY_API_KEY       Alchemy API key for RPC"
+	@echo "  ETHERSCAN_API_KEY     Etherscan API key for verification"
 	@echo ""
 	@echo "Examples:"
 	@echo "  # Deploy to Anvil (uses environment variables)"
@@ -132,27 +137,19 @@ interact-local:
 .PHONY: deploy-anvil
 deploy-anvil:
 	@echo "Deploying to local Anvil using environment variables..."
-	forge script script/Deploy.s.sol --rpc-url $(ANVIL_RPC_URL) --broadcast
+	forge script script/Deploy.s.sol --rpc-url $(ANVIL_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast
 
 .PHONY: deploy-sepolia
 deploy-sepolia:
-	@echo "Deploying to Sepolia testnet using parameters..."
-	@if [ -z "$(SUBSCRIPTION_ID)" ]; then echo "ERROR: Please set SUBSCRIPTION_ID"; exit 1; fi
-	@if [ -z "$(PRIVATE_KEY)" ]; then echo "ERROR: Please set PRIVATE_KEY"; exit 1; fi
-	@CALLBACK_GAS_LIMIT=$${CALLBACK_GAS_LIMIT:-300000}; \
-	FUNDING_AMOUNT=$${FUNDING_AMOUNT:-0}; \
-	forge script script/Deploy.s.sol --sig "run(uint64,uint256,uint32,uint256)" $(SUBSCRIPTION_ID) $(PRIVATE_KEY) $$CALLBACK_GAS_LIMIT $$FUNDING_AMOUNT --rpc-url $(SEPOLIA_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
+	@echo "Deploying to Sepolia testnet using environment variables..."
+	forge script script/Deploy.s.sol --rpc-url $(SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 .PHONY: deploy-mainnet
 deploy-mainnet:
-	@echo "Deploying to Ethereum mainnet using parameters..."
+	@echo "Deploying to Ethereum mainnet using environment variables..."
 	@echo "WARNING: This will deploy to MAINNET! Are you sure? (Press Enter to continue, Ctrl+C to cancel)"
 	@read
-	@if [ -z "$(SUBSCRIPTION_ID)" ]; then echo "ERROR: Please set SUBSCRIPTION_ID"; exit 1; fi
-	@if [ -z "$(PRIVATE_KEY)" ]; then echo "ERROR: Please set PRIVATE_KEY"; exit 1; fi
-	@CALLBACK_GAS_LIMIT=$${CALLBACK_GAS_LIMIT:-300000}; \
-	FUNDING_AMOUNT=$${FUNDING_AMOUNT:-0}; \
-	forge script script/Deploy.s.sol --sig "run(uint64,uint256,uint32,uint256)" $(SUBSCRIPTION_ID) $(PRIVATE_KEY) $$CALLBACK_GAS_LIMIT $$FUNDING_AMOUNT --rpc-url $(MAINNET_RPC_URL) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
+	forge script script/Deploy.s.sol --rpc-url $(MAINNET_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY)
 
 # Utility commands
 .PHONY: format
@@ -176,6 +173,13 @@ doc:
 check-env:
 	@echo "Checking environment variables..."
 	@if [ -z "$(PRIVATE_KEY)" ]; then echo "❌ PRIVATE_KEY not set"; else echo "✅ PRIVATE_KEY is set"; fi
+	@if [ -z "$(ACCOUNT_ADDRESS)" ]; then echo "❌ ACCOUNT_ADDRESS not set"; else echo "✅ ACCOUNT_ADDRESS is set"; fi
+	@if [ -z "$(VRF_SUBSCRIPTION_ID)" ]; then echo "❌ VRF_SUBSCRIPTION_ID not set"; else echo "✅ VRF_SUBSCRIPTION_ID is set"; fi
+	@if [ -z "$(VRF_CALLBACK_GAS_LIMIT)" ]; then echo "❌ VRF_CALLBACK_GAS_LIMIT not set"; else echo "✅ VRF_CALLBACK_GAS_LIMIT is set"; fi
+	@if [ -z "$(SEPOLIA_VRF_COORDINATOR)" ]; then echo "❌ SEPOLIA_VRF_COORDINATOR not set"; else echo "✅ SEPOLIA_VRF_COORDINATOR is set"; fi
+	@if [ -z "$(SEPOLIA_VRF_KEYHASH)" ]; then echo "❌ SEPOLIA_VRF_KEYHASH not set"; else echo "✅ SEPOLIA_VRF_KEYHASH is set"; fi
+	@if [ -z "$(MAINNET_VRF_COORDINATOR)" ]; then echo "❌ MAINNET_VRF_COORDINATOR not set"; else echo "✅ MAINNET_VRF_COORDINATOR is set"; fi
+	@if [ -z "$(MAINNET_VRF_KEYHASH)" ]; then echo "❌ MAINNET_VRF_KEYHASH not set"; else echo "✅ MAINNET_VRF_KEYHASH is set"; fi
 	@if [ -z "$(ALCHEMY_API_KEY)" ]; then echo "❌ ALCHEMY_API_KEY not set"; else echo "✅ ALCHEMY_API_KEY is set"; fi
 	@if [ -z "$(ETHERSCAN_API_KEY)" ]; then echo "❌ ETHERSCAN_API_KEY not set"; else echo "✅ ETHERSCAN_API_KEY is set"; fi
 	@if [ -z "$(VRF_SUBSCRIPTION_ID)" ]; then echo "⚠️  VRF_SUBSCRIPTION_ID not set (will use default)"; else echo "✅ VRF_SUBSCRIPTION_ID is set"; fi

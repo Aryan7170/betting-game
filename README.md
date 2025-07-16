@@ -72,8 +72,8 @@ SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/your-infura-key
 ETHERSCAN_API_KEY=your_etherscan_api_key
 
 # Chainlink VRF Configuration (Sepolia)
-VRF_COORDINATOR=0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625
-VRF_KEYHASH=0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c
+VRF_COORDINATOR=0x9DdfaCa8183c41ad55329BdeeD9F6A8d53168B1B
+VRF_KEYHASH=0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae
 VRF_SUBSCRIPTION_ID=your_subscription_id
 VRF_CALLBACK_GAS_LIMIT=300000
 ```
@@ -145,11 +145,11 @@ forge script script/Deploy.s.sol --rpc-url https://eth-sepolia.g.alchemy.com/v2/
 
 The `HelperConfig` automatically handles:
 
-- ✅ VRF Coordinator addresses for each network
-- ✅ Gas lane configurations
-- ✅ Mock VRF deployment for local testing
-- ✅ Subscription ID management
-- ✅ Deployment key management
+- VRF Coordinator addresses for each network
+- Gas lane configurations
+- Mock VRF deployment for local testing
+- Subscription ID management
+- Deployment key management
 
 Supported networks:
 
@@ -266,10 +266,6 @@ The project includes comprehensive tests covering:
 ## License
 
 MIT License
-
-## Disclaimer
-
-This is a educational/demonstration project. Gambling may be illegal in your jurisdiction. Use at your own risk.
 
 ## Support
 

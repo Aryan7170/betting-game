@@ -2,14 +2,14 @@
 pragma solidity ^0.8.19;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {MockVRFCoordinator} from "../test/mocks/MockVRFCoordinator.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
     uint96 public constant MOCK_BASE_FEE = 0.25 ether;
     uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
     // LINK / ETH price
-    int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
+    int256 public constant MOCK_WEI_PER_UINT_LINK = 4e15;
 
     address public constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
@@ -77,7 +77,7 @@ contract HelperConfig is CodeConstants, Script {
             callbackGasLimit: uint32(vm.envUint("VRF_CALLBACK_GAS_LIMIT")),
             vrfCoordinatorV2_5: vm.envAddress("MAINNET_VRF_COORDINATOR"),
             link: 0x514910771AF9Ca656af840dff83E8264EcF986CA,
-            account: vm.envAddress("ACCOUNT_ADDRESS")
+            account: vm.addr(vm.envUint("PRIVATE_KEY"))
         });
     }
 
@@ -88,7 +88,7 @@ contract HelperConfig is CodeConstants, Script {
             callbackGasLimit: uint32(vm.envUint("VRF_CALLBACK_GAS_LIMIT")),
             vrfCoordinatorV2_5: vm.envAddress("SEPOLIA_VRF_COORDINATOR"),
             link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
-            account: vm.envAddress("ACCOUNT_ADDRESS")
+            account: vm.addr(vm.envUint("PRIVATE_KEY"))
         });
     }
 
@@ -101,17 +101,19 @@ contract HelperConfig is CodeConstants, Script {
         console2.log(unicode"⚠️ You have deployed a mock contract!");
         console2.log("Make sure this was intentional");
         vm.startBroadcast();
-        VRFCoordinatorV2_5Mock vrfCoordinatorV2_5Mock =
-            new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+        MockVRFCoordinator vrfCoordinatorMock = new MockVRFCoordinator();
         LinkToken link = new LinkToken();
-        uint256 subscriptionId = vrfCoordinatorV2_5Mock.createSubscription();
+        
+        // Create subscription using our mock
+        uint64 subscriptionId = vrfCoordinatorMock.createSubscription();
+        
         vm.stopBroadcast();
 
         localNetworkConfig = NetworkConfig({
-            subscriptionId: uint64(subscriptionId),
+            subscriptionId: subscriptionId,
             gasLane: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c, // doesn't really matter
             callbackGasLimit: 500000, // 500,000 gas
-            vrfCoordinatorV2_5: address(vrfCoordinatorV2_5Mock),
+            vrfCoordinatorV2_5: address(vrfCoordinatorMock),
             link: address(link),
             account: FOUNDRY_DEFAULT_SENDER
         });
