@@ -5,25 +5,26 @@ import {Script, console} from "forge-std/Script.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {BettingGame} from "../src/BettingGame.sol";
 import {DevOpsTools} from "foundry-devops/src/DevOpsTools.sol";
-import {MockVRFCoordinator} from "../test/mocks/MockVRFCoordinator.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {LinkToken} from "../test/mocks/LinkToken.sol";
 import {CodeConstants} from "./HelperConfig.s.sol";
 
 contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint64, address) {
         HelperConfig helperConfig = new HelperConfig();
-        address vrfCoordinator = helperConfig.getConfigByChainId(block.chainid).vrfCoordinator;
+        address vrfCoordinatorV2_5 = helperConfig.getConfigByChainId(block.chainid).vrfCoordinatorV2_5;
         address account = helperConfig.getConfigByChainId(block.chainid).account;
-        return createSubscription(vrfCoordinator, account);
+        return createSubscription(vrfCoordinatorV2_5, account);
     }
 
-    function createSubscription(address vrfCoordinator, address account) public returns (uint64, address) {
+    function createSubscription(address vrfCoordinatorV2_5, address account) public returns (uint64, address) {
         console.log("Creating subscription on chainId: ", block.chainid);
         vm.startBroadcast(account);
-        uint64 subId = MockVRFCoordinator(vrfCoordinator).createSubscription();
+        uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinatorV2_5).createSubscription();
         vm.stopBroadcast();
         console.log("Your subscription Id is: ", subId);
         console.log("Please update the subscriptionId in HelperConfig.s.sol");
-        return (subId, vrfCoordinator);
+        return (uint64(subId), vrfCoordinatorV2_5);
     }
 
     function run() external returns (uint64, address) {
@@ -37,17 +38,17 @@ contract AddConsumer is Script {
         console.log("Using vrfCoordinator: ", vrfCoordinator);
         console.log("On ChainID: ", block.chainid);
         vm.startBroadcast(account);
-        MockVRFCoordinator(vrfCoordinator).addConsumer(subId, contractToAddToVrf);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(subId, contractToAddToVrf);
         vm.stopBroadcast();
     }
 
     function addConsumerUsingConfig(address mostRecentlyDeployed) public {
         HelperConfig helperConfig = new HelperConfig();
         uint64 subId = helperConfig.getConfig().subscriptionId;
-        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        address vrfCoordinatorV2_5 = helperConfig.getConfig().vrfCoordinatorV2_5;
         address account = helperConfig.getConfig().account;
 
-        addConsumer(mostRecentlyDeployed, vrfCoordinator, subId, account);
+        addConsumer(mostRecentlyDeployed, vrfCoordinatorV2_5, subId, account);
     }
 
     function run() external {
@@ -62,122 +63,41 @@ contract FundSubscription is CodeConstants, Script {
     function fundSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
         uint64 subId = helperConfig.getConfig().subscriptionId;
-        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        address vrfCoordinatorV2_5 = helperConfig.getConfig().vrfCoordinatorV2_5;
+        address link = helperConfig.getConfig().link;
         address account = helperConfig.getConfig().account;
 
         if (subId == 0) {
             CreateSubscription createSub = new CreateSubscription();
             (uint64 updatedSubId, address updatedVRFv2) = createSub.run();
             subId = updatedSubId;
-            vrfCoordinator = updatedVRFv2;
-            console.log("New SubId Created! ", subId, "VRF Address: ", vrfCoordinator);
+            vrfCoordinatorV2_5 = updatedVRFv2;
+            console.log("New SubId Created! ", subId, "VRF Address: ", vrfCoordinatorV2_5);
         }
 
-        fundSubscription(vrfCoordinator, subId, account);
+        fundSubscription(vrfCoordinatorV2_5, subId, link, account);
     }
 
-    function fundSubscription(address vrfCoordinator, uint64 subId, address account) public {
+    function fundSubscription(address vrfCoordinatorV2_5, uint64 subId, address link, address account) public {
         console.log("Funding subscription: ", subId);
-        console.log("Using vrfCoordinator: ", vrfCoordinator);
+        console.log("Using vrfCoordinator: ", vrfCoordinatorV2_5);
         console.log("On ChainID: ", block.chainid);
-        
         if (block.chainid == LOCAL_CHAIN_ID) {
             vm.startBroadcast(account);
-            MockVRFCoordinator(vrfCoordinator).fundSubscription(subId, FUND_AMOUNT);
+            VRFCoordinatorV2_5Mock(vrfCoordinatorV2_5).fundSubscription(subId, FUND_AMOUNT);
             vm.stopBroadcast();
         } else {
-            console.log("Please fund your subscription with LINK tokens manually");
-            console.log("Subscription ID: ", subId);
-            console.log("VRF Coordinator: ", vrfCoordinator);
+            console.log(LinkToken(link).balanceOf(msg.sender));
+            console.log(msg.sender);
+            console.log(LinkToken(link).balanceOf(address(this)));
+            console.log(address(this));
+            vm.startBroadcast(account);
+            LinkToken(link).transferAndCall(vrfCoordinatorV2_5, FUND_AMOUNT, abi.encode(subId));
+            vm.stopBroadcast();
         }
     }
 
     function run() external {
         fundSubscriptionUsingConfig();
-    }
-}
-
-contract PlaceBet is Script {
-    function placeCoinBetUsingConfig(uint256 betAmount, uint256 prediction) public {
-        HelperConfig helperConfig = new HelperConfig();
-        address account = helperConfig.getConfig().account;
-        
-        address bettingGameAddress = vm.envAddress("BETTING_GAME_ADDRESS");
-        
-        placeCoinBet(bettingGameAddress, betAmount, prediction, account);
-    }
-
-    function placeCoinBet(address bettingGame, uint256 betAmount, uint256 prediction, address account) public {
-        console.log("Placing coin bet on: ", bettingGame);
-        console.log("Bet amount: ", betAmount);
-        console.log("Prediction: ", prediction == 0 ? "Heads" : "Tails");
-        
-        vm.startBroadcast(account);
-        BettingGame(payable(bettingGame)).placeCoinBet{value: betAmount}(prediction);
-        vm.stopBroadcast();
-    }
-
-    function run() external {
-        placeCoinBetUsingConfig(0.01 ether, 0); // Default: 0.01 ETH on heads
-    }
-}
-
-contract PlaceDiceBet is Script {
-    function placeDiceBetUsingConfig(uint256 betAmount, uint256 prediction) public {
-        HelperConfig helperConfig = new HelperConfig();
-        address account = helperConfig.getConfig().account;
-        
-        address bettingGameAddress = vm.envAddress("BETTING_GAME_ADDRESS");
-        
-        placeDiceBet(bettingGameAddress, betAmount, prediction, account);
-    }
-
-    function placeDiceBet(address bettingGame, uint256 betAmount, uint256 prediction, address account) public {
-        console.log("Placing dice bet on: ", bettingGame);
-        console.log("Bet amount: ", betAmount);
-        console.log("Prediction: ", prediction);
-        
-        vm.startBroadcast(account);
-        BettingGame(payable(bettingGame)).placeDiceBet{value: betAmount}(prediction);
-        vm.stopBroadcast();
-    }
-
-    function run() external {
-        placeDiceBetUsingConfig(0.01 ether, 4); // Default: 0.01 ETH on 4
-    }
-}
-
-contract FulfillRandomWords is Script {
-    function fulfillRandomWordsUsingConfig(uint256 requestId, uint256 randomness) public {
-        HelperConfig helperConfig = new HelperConfig();
-        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        address account = helperConfig.getConfig().account;
-        
-        address bettingGameAddress = vm.envAddress("BETTING_GAME_ADDRESS");
-        
-        fulfillRandomWords(requestId, randomness, vrfCoordinator, bettingGameAddress, account);
-    }
-
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256 randomness,
-        address vrfCoordinator,
-        address consumer,
-        address account
-    ) public {
-        console.log("Fulfilling random words for request: ", requestId);
-        console.log("With randomness: ", randomness);
-        console.log("VRF Coordinator: ", vrfCoordinator);
-        console.log("Consumer: ", consumer);
-        
-        vm.startBroadcast(account);
-        uint256[] memory randomWords = new uint256[](1);
-        randomWords[0] = randomness;
-        MockVRFCoordinator(vrfCoordinator).fulfillRandomWords(requestId, consumer, randomWords);
-        vm.stopBroadcast();
-    }
-
-    function run() external {
-        fulfillRandomWordsUsingConfig(1, 12345); // Default values
     }
 }

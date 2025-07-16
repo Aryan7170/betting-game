@@ -2,25 +2,20 @@
 pragma solidity ^0.8.19;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {MockVRFCoordinator} from "../test/mocks/MockVRFCoordinator.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {LinkToken} from "../test/mocks/LinkToken.sol";
 
 abstract contract CodeConstants {
-    /*//////////////////////////////////////////////////////////////
-                               CHAIN IDS
-    //////////////////////////////////////////////////////////////*/
+    uint96 public constant MOCK_BASE_FEE = 0.25 ether;
+    uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
+    // LINK / ETH price
+    int256 public constant MOCK_WEI_PER_UNIT_LINK = 4e15;
+
+    address public constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
+
     uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant ETH_MAINNET_CHAIN_ID = 1;
-    uint256 public constant POLYGON_MAINNET_CHAIN_ID = 137;
-    uint256 public constant ARBITRUM_MAINNET_CHAIN_ID = 42161;
     uint256 public constant LOCAL_CHAIN_ID = 31337;
-
-    /*//////////////////////////////////////////////////////////////
-                            DEFAULT VALUES
-    //////////////////////////////////////////////////////////////*/
-    uint32 public constant DEFAULT_CALLBACK_GAS_LIMIT = 300000;
-    uint64 public constant DEFAULT_SUBSCRIPTION_ID = 0;
-    
-    address public constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 }
 
 contract HelperConfig is CodeConstants, Script {
@@ -34,15 +29,17 @@ contract HelperConfig is CodeConstants, Script {
     //////////////////////////////////////////////////////////////*/
     struct NetworkConfig {
         uint64 subscriptionId;
-        address vrfCoordinator;
         bytes32 gasLane;
         uint32 callbackGasLimit;
+        address vrfCoordinatorV2_5;
+        address link;
         address account;
     }
 
     /*//////////////////////////////////////////////////////////////
                             STATE VARIABLES
     //////////////////////////////////////////////////////////////*/
+    // Local network state variables
     NetworkConfig public localNetworkConfig;
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
@@ -52,8 +49,7 @@ contract HelperConfig is CodeConstants, Script {
     constructor() {
         networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaEthConfig();
         networkConfigs[ETH_MAINNET_CHAIN_ID] = getMainnetEthConfig();
-        networkConfigs[POLYGON_MAINNET_CHAIN_ID] = getPolygonMainnetConfig();
-        networkConfigs[ARBITRUM_MAINNET_CHAIN_ID] = getArbitrumMainnetConfig();
+        // Note: We skip doing the local config
     }
 
     function getConfig() public returns (NetworkConfig memory) {
@@ -65,7 +61,7 @@ contract HelperConfig is CodeConstants, Script {
     }
 
     function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
-        if (networkConfigs[chainId].vrfCoordinator != address(0)) {
+        if (networkConfigs[chainId].vrfCoordinatorV2_5 != address(0)) {
             return networkConfigs[chainId];
         } else if (chainId == LOCAL_CHAIN_ID) {
             return getOrCreateAnvilEthConfig();
@@ -74,73 +70,51 @@ contract HelperConfig is CodeConstants, Script {
         }
     }
 
-    /*//////////////////////////////////////////////////////////////
-                                CONFIGS
-    //////////////////////////////////////////////////////////////*/
-    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaNetworkConfig) {
-        sepoliaNetworkConfig = NetworkConfig({
-            subscriptionId: DEFAULT_SUBSCRIPTION_ID, // If left as 0, our scripts will create one!
-            vrfCoordinator: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625,
-            gasLane: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c,
-            callbackGasLimit: DEFAULT_CALLBACK_GAS_LIMIT,
-            account: FOUNDRY_DEFAULT_SENDER
-        });
-    }
-
-    function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
+    function getMainnetEthConfig() public view returns (NetworkConfig memory mainnetNetworkConfig) {
         mainnetNetworkConfig = NetworkConfig({
-            subscriptionId: DEFAULT_SUBSCRIPTION_ID, // If left as 0, our scripts will create one!
-            vrfCoordinator: 0x271682DEB8C4E0901D1a1550aD2e64D568E69909,
-            gasLane: 0x9fe0eebf5e446e3c998ec9bb19951541aee00bb90ea201ae456421a2ded86805,
-            callbackGasLimit: DEFAULT_CALLBACK_GAS_LIMIT,
-            account: FOUNDRY_DEFAULT_SENDER
+            subscriptionId: uint64(vm.envUint("VRF_SUBSCRIPTION_ID")),
+            gasLane: vm.envBytes32("MAINNET_VRF_KEYHASH"),
+            callbackGasLimit: uint32(vm.envUint("VRF_CALLBACK_GAS_LIMIT")),
+            vrfCoordinatorV2_5: vm.envAddress("MAINNET_VRF_COORDINATOR"),
+            link: 0x514910771AF9Ca656af840dff83E8264EcF986CA,
+            account: vm.envAddress("ACCOUNT_ADDRESS")
         });
     }
 
-    function getPolygonMainnetConfig() public pure returns (NetworkConfig memory polygonNetworkConfig) {
-        polygonNetworkConfig = NetworkConfig({
-            subscriptionId: DEFAULT_SUBSCRIPTION_ID, // If left as 0, our scripts will create one!
-            vrfCoordinator: 0xAE975071Be8F8eE67addBC1A82488F1C24858067,
-            gasLane: 0x6e099d640cde6de9d40ac749b4b594126b0169747122711109c9985d47751f93,
-            callbackGasLimit: DEFAULT_CALLBACK_GAS_LIMIT,
-            account: FOUNDRY_DEFAULT_SENDER
+    function getSepoliaEthConfig() public view returns (NetworkConfig memory sepoliaNetworkConfig) {
+        sepoliaNetworkConfig = NetworkConfig({
+            subscriptionId: uint64(vm.envUint("VRF_SUBSCRIPTION_ID")),
+            gasLane: vm.envBytes32("SEPOLIA_VRF_KEYHASH"),
+            callbackGasLimit: uint32(vm.envUint("VRF_CALLBACK_GAS_LIMIT")),
+            vrfCoordinatorV2_5: vm.envAddress("SEPOLIA_VRF_COORDINATOR"),
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            account: vm.envAddress("ACCOUNT_ADDRESS")
         });
     }
 
-    function getArbitrumMainnetConfig() public pure returns (NetworkConfig memory arbitrumNetworkConfig) {
-        arbitrumNetworkConfig = NetworkConfig({
-            subscriptionId: DEFAULT_SUBSCRIPTION_ID, // If left as 0, our scripts will create one!
-            vrfCoordinator: 0x41034678D6C633D8a95c75e1138A360a28bA15d1,
-            gasLane: 0x68d24f9a037a649944964c2a1ebd0b2918f4a243d2a99701cc22b548cf2daff0,
-            callbackGasLimit: DEFAULT_CALLBACK_GAS_LIMIT,
-            account: FOUNDRY_DEFAULT_SENDER
-        });
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                              LOCAL CONFIG
-    //////////////////////////////////////////////////////////////*/
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
         // Check to see if we set an active network config
-        if (localNetworkConfig.vrfCoordinator != address(0)) {
+        if (localNetworkConfig.vrfCoordinatorV2_5 != address(0)) {
             return localNetworkConfig;
         }
 
         console2.log(unicode"⚠️ You have deployed a mock contract!");
         console2.log("Make sure this was intentional");
-        
         vm.startBroadcast();
-        MockVRFCoordinator mockVRFCoordinator = new MockVRFCoordinator();
+        VRFCoordinatorV2_5Mock vrfCoordinatorV2_5Mock =
+            new VRFCoordinatorV2_5Mock(MOCK_BASE_FEE, MOCK_GAS_PRICE_LINK, MOCK_WEI_PER_UNIT_LINK);
+        LinkToken link = new LinkToken();
+        uint256 subscriptionId = vrfCoordinatorV2_5Mock.createSubscription();
         vm.stopBroadcast();
 
         localNetworkConfig = NetworkConfig({
-            subscriptionId: 1, // Mock subscription ID
-            vrfCoordinator: address(mockVRFCoordinator),
+            subscriptionId: uint64(subscriptionId),
             gasLane: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c, // doesn't really matter
-            callbackGasLimit: DEFAULT_CALLBACK_GAS_LIMIT,
+            callbackGasLimit: 500000, // 500,000 gas
+            vrfCoordinatorV2_5: address(vrfCoordinatorV2_5Mock),
+            link: address(link),
             account: FOUNDRY_DEFAULT_SENDER
         });
-        
         vm.deal(localNetworkConfig.account, 100 ether);
         return localNetworkConfig;
     }

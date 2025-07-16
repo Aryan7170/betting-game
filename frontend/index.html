@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betting Game DApp</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .wallet-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .wallet-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            color: white;
+        }
+
+        .connect-btn, .game-btn, .action-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .connect-btn:hover, .game-btn:hover, .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+        }
+
+        .game-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .game-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .game-card h3 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #4a5568;
+            text-align: center;
+        }
+
+        .game-visual {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .coin {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #8b4513;
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+
+        .dice {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 2px solid #ddd;
+        }
+
+        .bet-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .bet-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .bet-input label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .bet-input input, .bet-input select {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .bet-input input:focus, .bet-input select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .prediction-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .prediction-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .prediction-btn:hover, .prediction-btn.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .dice-numbers {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .dice-btn {
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+
+        .dice-btn:hover, .dice-btn.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .recent-bets {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .recent-bets h3 {
+            margin-bottom: 20px;
+            color: #4a5568;
+        }
+
+        .bet-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .bet-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .bet-item.won {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .bet-item.lost {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .bet-item.pending {
+            border-left-color: #ffc107;
+            background: #fffdf0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .disabled {
+            opacity: 0.6;
+            cursor: not-allowed !important;
+        }
+
+        .config-section {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .config-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .config-input label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 150px;
+        }
+
+        .config-input input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: monospace;
+        }
+
+        @media (max-width: 768px) {
+            .game-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .wallet-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-dice"></i> Betting Game DApp</h1>
+            <p>Place your bets on coin flips and dice rolls!</p>
+        </div>
+
+        <div class="config-section">
+            <h3><i class="fas fa-cog"></i> Configuration</h3>
+            <p style="margin-bottom: 15px; color: #666;">Enter your deployed contract address to start using the betting game.</p>
+            <div class="config-input">
+                <label>Contract Address:</label>
+                <input type="text" id="contract-address" placeholder="Enter your deployed contract address (e.g., 0x123...)">
+            </div>
+            <button id="update-config" class="action-btn">Update Configuration</button>
+        </div>
+
+        <div class="wallet-section">
+            <div class="wallet-info">
+                <div>
+                    <span id="wallet-address">Not Connected</span>
+                    <br>
+                    <small>Balance: <span id="wallet-balance">0</span> ETH</small>
+                </div>
+                <button id="connect-wallet" class="connect-btn">
+                    <i class="fas fa-wallet"></i> Connect Wallet
+                </button>
+            </div>
+        </div>
+
+        <div class="game-section">
+            <div class="game-card">
+                <h3><i class="fas fa-coins"></i> Coin Flip</h3>
+                <div class="game-visual">
+                    <div class="coin">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+                <div class="bet-controls">
+                    <div class="bet-input">
+                        <label>Bet Amount:</label>
+                        <input type="number" id="coin-bet-amount" placeholder="0.01" min="0.0001" step="0.0001">
+                        <span>ETH</span>
+                    </div>
+                    <div class="prediction-buttons">
+                        <button class="prediction-btn" data-value="0">
+                            <i class="fas fa-sun"></i> Heads
+                        </button>
+                        <button class="prediction-btn" data-value="1">
+                            <i class="fas fa-moon"></i> Tails
+                        </button>
+                    </div>
+                    <button id="place-coin-bet" class="game-btn">
+                        <i class="fas fa-play"></i> Place Coin Bet
+                    </button>
+                </div>
+            </div>
+
+            <div class="game-card">
+                <h3><i class="fas fa-dice-six"></i> Dice Roll</h3>
+                <div class="game-visual">
+                    <div class="dice">
+                        <i class="fas fa-question"></i>
+                    </div>
+                </div>
+                <div class="bet-controls">
+                    <div class="bet-input">
+                        <label>Bet Amount:</label>
+                        <input type="number" id="dice-bet-amount" placeholder="0.01" min="0.0001" step="0.0001">
+                        <span>ETH</span>
+                    </div>
+                    <div class="dice-numbers">
+                        <button class="dice-btn" data-value="1">1</button>
+                        <button class="dice-btn" data-value="2">2</button>
+                        <button class="dice-btn" data-value="3">3</button>
+                        <button class="dice-btn" data-value="4">4</button>
+                        <button class="dice-btn" data-value="5">5</button>
+                        <button class="dice-btn" data-value="6">6</button>
+                    </div>
+                    <button id="place-dice-bet" class="game-btn">
+                        <i class="fas fa-play"></i> Place Dice Bet
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3><i class="fas fa-chart-bar"></i> Game Statistics</h3>
+                <button class="action-btn" id="refresh-stats" style="background: #38a169; font-size: 14px; padding: 8px 16px;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-bets">0</div>
+                    <div class="stat-label">Total Bets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-payout">0</div>
+                    <div class="stat-label">Total Payout (ETH)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="contract-balance">0</div>
+                    <div class="stat-label">Contract Balance (ETH)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="your-wins">0</div>
+                    <div class="stat-label">Your Wins</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="recent-bets">
+            <h3><i class="fas fa-history"></i> Recent Bets</h3>
+            <div class="bet-history" id="bet-history">
+                <div class="bet-item">
+                    <div>
+                        <strong>Connect wallet to view bet history</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

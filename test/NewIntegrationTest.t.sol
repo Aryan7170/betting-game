@@ -8,7 +8,7 @@ import "../script/Interactions.s.sol";
 import "../script/HelperConfig.s.sol";
 import "./mocks/MockVRFCoordinator.sol";
 
-contract NewBettingGameIntegrationTest is Test {
+contract NewBettingGameIntegrationTest2 is Test {
     BettingGame public bettingGame;
     MockVRFCoordinator public mockVRFCoordinator;
     HelperConfig public helperConfig;
@@ -109,19 +109,19 @@ contract NewBettingGameIntegrationTest is Test {
         
         // Multiple players place bets
         vm.startPrank(player1);
-        bettingGame.placeCoinBet{value: betAmount}(0); // Betting on heads
+        bettingGame.placeCoinBet{value: betAmount}(0);
         vm.stopPrank();
         
         vm.startPrank(player2);
-        bettingGame.placeCoinBet{value: betAmount}(1); // Betting on tails
+        bettingGame.placeCoinBet{value: betAmount}(1);
         vm.stopPrank();
         
         vm.startPrank(player3);
-        bettingGame.placeDiceBet{value: betAmount}(4); // Betting on 4
+        bettingGame.placeDiceBet{value: betAmount}(4);
         vm.stopPrank();
         
         vm.startPrank(player4);
-        bettingGame.placeDiceBet{value: betAmount}(2); // Betting on 2
+        bettingGame.placeDiceBet{value: betAmount}(2);
         vm.stopPrank();
         
         // Verify all bets were placed
@@ -130,19 +130,19 @@ contract NewBettingGameIntegrationTest is Test {
         // Fulfill all VRF requests
         uint256[] memory randomWords = new uint256[](1);
         
-        // Player 1 wins (coin result 0 = heads)
+        // Player 1 wins
         randomWords[0] = 0;
         mockVRFCoordinator.fulfillRandomWords(1, address(bettingGame), randomWords);
         
-        // Player 2 loses (coin result 0 = heads, but they bet on tails)
+        // Player 2 loses
         randomWords[0] = 0;
         mockVRFCoordinator.fulfillRandomWords(2, address(bettingGame), randomWords);
         
-        // Player 3 wins (dice: (3 % 6) + 1 = 4)
-        randomWords[0] = 3;
+        // Player 3 wins
+        randomWords[0] = 4;
         mockVRFCoordinator.fulfillRandomWords(3, address(bettingGame), randomWords);
         
-        // Player 4 loses (dice: (5 % 6) + 1 = 6, but they bet on 2)
+        // Player 4 loses
         randomWords[0] = 5;
         mockVRFCoordinator.fulfillRandomWords(4, address(bettingGame), randomWords);
         
@@ -170,7 +170,7 @@ contract NewBettingGameIntegrationTest is Test {
         
         // Fulfill with winning result
         uint256[] memory randomWords = new uint256[](1);
-        randomWords[0] = 0; // Win (0 % 2 = 0, which is heads)
+        randomWords[0] = 0; // Win
         mockVRFCoordinator.fulfillRandomWords(1, address(bettingGame), randomWords);
         
         BettingGame.Bet memory bet = bettingGame.getBet(0);
@@ -183,8 +183,7 @@ contract NewBettingGameIntegrationTest is Test {
         vm.stopPrank();
         
         // Fulfill with winning result
-        // For dice: (randomResult % 6) + 1, so to get 3 we need randomResult % 6 = 2
-        randomWords[0] = 2; // Results in (2 % 6) + 1 = 3
+        randomWords[0] = 3; // Win
         mockVRFCoordinator.fulfillRandomWords(2, address(bettingGame), randomWords);
         
         bet = bettingGame.getBet(1);
@@ -250,9 +249,8 @@ contract NewBettingGameIntegrationTest is Test {
         uint256 expectedBalance = 100 ether + totalBetAmount - totalWinnings;
         assertEq(contractBalance, expectedBalance);
         
-        // With controlled 50% win rate and house edge, we expect some profit for house
-        // But this is just ensuring the system works, not that house always wins
-        assertGe(totalBetAmount, 0);
+        // With 50% win rate and house edge, total bet amount should be > total winnings
+        assertGt(totalBetAmount, totalWinnings);
     }
     
     function testDeploymentWorkflow() public {
@@ -298,7 +296,7 @@ contract NewBettingGameIntegrationTest is Test {
             owner
         );
         
-        assertEq(subId, 1); // Should be 1 since mock starts with 1 and increments
+        assertEq(subId, 2); // Should be incremented from initial subscription
         assertEq(vrfCoordinator, address(mockVRFCoordinator));
         
         // Fund subscription directly using MockVRFCoordinator
